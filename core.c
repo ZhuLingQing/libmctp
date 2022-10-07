@@ -756,6 +756,7 @@ static int mctp_message_tx_on_bus(struct mctp *mctp, struct mctp_bus *bus,
 	mctp_prdebug(
 		"Generating packets for transmission of %zu byte message from %hhu to %hhu",
 		msg_len, src, dest);
+	mctp_trace_common("DATA: ", msg, msg_len);
 
 	/* queue up packets, each of max MCTP_MTU size */
 	for (p = 0, i = 0; p < msg_len; i++) {

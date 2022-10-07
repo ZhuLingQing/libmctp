@@ -30,7 +30,7 @@ static void (*log_custom_fn)(int, const char *, va_list);
 #define TRACE_FORMAT "%02X "
 #define TRACE_FORMAT_SIZE 3
 
-static bool trace_enable;
+static bool trace_enable = false;
 
 void mctp_prlog(int level, const char *fmt, ...)
 {
@@ -66,6 +66,7 @@ void mctp_set_log_stdio(int level)
 {
 	log_type = MCTP_LOG_STDIO;
 	log_stdio_level = level;
+	trace_enable = true;
 }
 
 void mctp_set_log_syslog(void)

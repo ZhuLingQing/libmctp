@@ -6,11 +6,14 @@
 
 #include "libmctp-cmds.h"
 #include "libmctp-alloc.h"
+#include "libmctp-log.h"
 
 #include "test-utils.h"
 
 static const mctp_eid_t eid_1 = 9;
 static const mctp_eid_t eid_2 = 10;
+static const mctp_eid_t eid_tar = 11;
+static uint8_t m_tag = 0;
 /*arbitrary value taken*/
 static const uint8_t _instance_id = 0x05;
 
@@ -28,6 +31,9 @@ void control_message_callback(mctp_eid_t src, void *data, void *buf, size_t len,
 			      bool tag_owner, uint8_t tag, void *prv)
 {
 	struct mctp_ctrl_msg_hdr *msg_hdr = buf;
+	
+	mctp_trace_rx(buf,len);
+
 	printf("Control message received - command code: 0x%x\n",
 	       msg_hdr->command_code);
 	assert(msg_hdr->command_code == MCTP_CTRL_CMD_GET_ENDPOINT_ID ||
@@ -40,6 +46,9 @@ void control_message_transport_callback(mctp_eid_t src, void *data, void *buf,
 					void *prv)
 {
 	struct mctp_ctrl_msg_hdr *msg_hdr = buf;
+	
+	mctp_trace_rx(buf,len);
+
 	printf("Transport control message received - command code: 0x%X\n",
 	       msg_hdr->command_code);
 	assert(msg_hdr->command_code == 0xF2);
@@ -49,9 +58,12 @@ void control_message_transport_callback(mctp_eid_t src, void *data, void *buf,
 int mctp_test_tx(struct mctp_binding *b, struct mctp_pktbuf *pkt)
 {
 	struct msg_response *resp = mctp_pktbuf_data(pkt);
+	
+	mctp_trace_tx(&pkt->data[pkt->start], mctp_pktbuf_size(pkt));
+
 	printf("Control message response sent from 0x%X: completion code 0x%X\n",
 	       mctp_pktbuf_hdr(pkt)->src, resp->completion_code);
-	assert(resp->completion_code == MCTP_CTRL_CC_ERROR_UNSUPPORTED_CMD);
+	// assert(resp->completion_code == MCTP_CTRL_CC_ERROR_UNSUPPORTED_CMD);
 	(*(uint8_t *)b->control_rx_data)++;
 	return 0;
 }
@@ -141,7 +153,7 @@ void send_transport_control_message(struct mctp_binding *bin)
 	rcv_ctrl_msg(bin, &ctl_msg_to_send, sizeof(ctl_msg_to_send));
 }
 
-void send_message_set_eid(const uint8_t eid)
+void send_message_set_eid(struct mctp *pmctp, const uint8_t eid)
 {
 	struct mctp_ctrl_cmd_set_eid cmd_set_eid;
 
@@ -157,9 +169,11 @@ void send_message_set_eid(const uint8_t eid)
 
 	assert(cmd_set_eid.eid == eid);
 	assert(cmd_set_eid.operation == set_eid);
+
+	mctp_message_tx(pmctp,eid,&cmd_set_eid,sizeof(cmd_set_eid),true,m_tag++,NULL);
 }
 
-void send_message_get_eid(void)
+void send_message_get_eid(struct mctp *pmctp)
 {
 	struct mctp_ctrl_cmd_get_eid cmd_get_eid;
 
@@ -171,9 +185,11 @@ void send_message_get_eid(void)
 	assert(cmd_get_eid.ctrl_msg_hdr.rq_dgram_inst ==
 	       (_instance_id | MCTP_CTRL_HDR_FLAG_REQUEST));
 	assert(cmd_get_eid.ctrl_msg_hdr.ic_msg_type == MCTP_CTRL_HDR_MSG_TYPE);
+
+	mctp_message_tx(pmctp,eid_tar,&cmd_get_eid,sizeof(cmd_get_eid),true,m_tag++,NULL);
 }
 
-void send_message_get_uuid(void)
+void send_message_get_uuid(struct mctp *pmctp)
 {
 	struct mctp_ctrl_cmd_get_uuid cmd_get_uuid;
 
@@ -185,9 +201,11 @@ void send_message_get_uuid(void)
 	assert(cmd_get_uuid.ctrl_msg_hdr.rq_dgram_inst ==
 	       (_instance_id | MCTP_CTRL_HDR_FLAG_REQUEST));
 	assert(cmd_get_uuid.ctrl_msg_hdr.ic_msg_type == MCTP_CTRL_HDR_MSG_TYPE);
+
+	mctp_message_tx(pmctp,eid_tar,&cmd_get_uuid,sizeof(cmd_get_uuid),true,m_tag++,NULL);
 }
 
-void send_message_get_version_ctrl(void)
+void send_message_get_version_ctrl(struct mctp *pmctp)
 {
 	struct mctp_ctrl_cmd_get_mctp_ver_support cmd_version_support;
 
@@ -202,9 +220,11 @@ void send_message_get_version_ctrl(void)
 	       (_instance_id | MCTP_CTRL_HDR_FLAG_REQUEST));
 	assert(cmd_version_support.ctrl_msg_hdr.ic_msg_type ==
 	       MCTP_CTRL_HDR_MSG_TYPE);
+
+	mctp_message_tx(pmctp,eid_tar,&cmd_version_support,sizeof(cmd_version_support),true,m_tag++,NULL);
 }
 
-void send_cmd_get_msg_type_support(void)
+void send_cmd_get_msg_type_support(struct mctp *pmctp)
 {
 	struct mctp_ctrl_cmd_get_msg_type_support cmd_get_msg_type_support;
 
@@ -218,9 +238,11 @@ void send_cmd_get_msg_type_support(void)
 	       (_instance_id | MCTP_CTRL_HDR_FLAG_REQUEST));
 	assert(cmd_get_msg_type_support.ctrl_msg_hdr.ic_msg_type ==
 	       MCTP_CTRL_HDR_MSG_TYPE);
+
+	mctp_message_tx(pmctp,eid_tar,&cmd_get_msg_type_support,sizeof(cmd_get_msg_type_support),true,m_tag++,NULL);
 }
 
-void send_cmd_get_vdm_support(struct mctp_binding *test_binding,
+void send_cmd_get_vdm_support(struct mctp *pmctp, struct mctp_binding *test_binding,
 			      const uint8_t val)
 {
 	struct mctp_ctrl_cmd_get_vdm_support cmd_get_vdm_support;
@@ -237,9 +259,11 @@ void send_cmd_get_vdm_support(struct mctp_binding *test_binding,
 	       MCTP_CTRL_HDR_MSG_TYPE);
 
 	assert(cmd_get_vdm_support.vendor_id_set_selector == val);
+
+	mctp_message_tx(pmctp,eid_tar,&cmd_get_vdm_support,sizeof(cmd_get_vdm_support),true,m_tag++,NULL);
 }
 
-void send_cmd_discover_notify(struct mctp_binding *test_binding)
+void send_cmd_discover_notify(struct mctp *pmctp, struct mctp_binding *test_binding)
 {
 	struct mctp_ctrl_cmd_discovery_notify discovery_notify_cmd;
 
@@ -253,9 +277,11 @@ void send_cmd_discover_notify(struct mctp_binding *test_binding)
 	       (_instance_id | MCTP_CTRL_HDR_FLAG_REQUEST));
 	assert(discovery_notify_cmd.ctrl_msg_hdr.ic_msg_type ==
 	       MCTP_CTRL_HDR_MSG_TYPE);
+
+	mctp_message_tx(pmctp,eid_tar,&discovery_notify_cmd,sizeof(discovery_notify_cmd),true,m_tag++,NULL);
 }
 
-void send_cmd_routing_table(struct mctp_binding *test_binding,
+void send_cmd_routing_table(struct mctp *pmctp, struct mctp_binding *test_binding,
 			    const uint8_t val)
 {
 	struct mctp_ctrl_cmd_get_routing_table get_routing_table_cmd;
@@ -273,9 +299,11 @@ void send_cmd_routing_table(struct mctp_binding *test_binding,
 	       MCTP_CTRL_HDR_MSG_TYPE);
 
 	assert(get_routing_table_cmd.entry_handle == val);
+
+	mctp_message_tx(pmctp,eid_tar,&get_routing_table_cmd,sizeof(get_routing_table_cmd),true,m_tag++,NULL);
 }
 
-void send_message_negative_get_version_ctrl(struct mctp_binding *test_binding)
+void send_message_negative_get_version_ctrl(struct mctp *pmctp, struct mctp_binding *test_binding)
 {
 	assert(false == mctp_encode_ctrl_cmd_get_ver_support(
 				NULL,
@@ -291,6 +319,7 @@ int main(int argc, char *argv[])
 	uint8_t callback_results = 0;
 	const uint8_t expected_callback_results = 3;
 
+	mctp_set_log_stdio(MCTP_LOG_DEBUG);
 	setup_test_binding(&test_binding, test_endpoint, &callback_results);
 
 	send_control_message(&test_binding);
@@ -302,26 +331,26 @@ int main(int argc, char *argv[])
 	/* Transport control message: */
 	assert(callback_results == expected_callback_results);
 
-	send_message_set_eid(eid_1);
+	send_message_set_eid(test_endpoint,eid_1);
 
-	send_message_get_eid();
+	send_message_get_eid(test_endpoint);
 
-	send_message_get_uuid();
+	send_message_get_uuid(test_endpoint);
 
-	send_message_get_version_ctrl();
+	send_message_get_version_ctrl(test_endpoint);
 
-	send_cmd_get_msg_type_support();
+	send_cmd_get_msg_type_support(test_endpoint);
 
-	send_cmd_get_vdm_support(NULL, 5);
+	send_cmd_get_vdm_support(test_endpoint,NULL, 5);
 
-	send_cmd_discover_notify(NULL);
+	send_cmd_discover_notify(test_endpoint,NULL);
 
-	send_cmd_routing_table(NULL, 10);
+	send_cmd_routing_table(test_endpoint,NULL, 10);
 
 	/*negative test case for eid*/
-	send_message_set_eid(1);
+	send_message_set_eid(test_endpoint,1);
 
-	send_message_negative_get_version_ctrl(NULL);
+	send_message_negative_get_version_ctrl(test_endpoint,NULL);
 
 	__mctp_free(test_endpoint);
 }

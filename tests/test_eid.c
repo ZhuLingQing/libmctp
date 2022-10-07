@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include <libmctp.h>
+#include "libmctp-log.h"
 
 #include "test-utils.h"
 
@@ -48,6 +49,7 @@ int main(void)
 		uint8_t payload[1];
 	} pktbuf;
 
+	mctp_set_log_stdio(MCTP_LOG_DEBUG);
 	mctp_test_stack_init(&ctx->mctp, &ctx->binding, local_eid);
 
 	mctp_set_rx_all(ctx->mctp, test_rx, ctx);

@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include <libmctp.h>
+#include "libmctp-log.h"
 
 #include "test-utils.h"
 
@@ -145,6 +146,7 @@ int main(void)
 	struct test_ctx ctx;
 	unsigned int i;
 
+	mctp_set_log_stdio(MCTP_LOG_DEBUG);
 	for (i = 0; i < ARRAY_SIZE(tests); i++)
 		run_one_test(&ctx, &tests[i]);
 

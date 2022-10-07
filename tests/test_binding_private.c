@@ -6,6 +6,7 @@
 
 #include <libmctp.h>
 #include <libmctp-alloc.h>
+#include <libmctp-log.h>
 
 #ifdef NDEBUG
 #undef NDEBUG
@@ -231,6 +232,7 @@ int main()
 {
 	size_t i;
 
+	mctp_set_log_stdio(MCTP_LOG_DEBUG);
 	for (i = 0; i < ARRAY_SIZE(msg_binding_private_tests); i++) {
 		msg_binding_private_tests[i].test();
 	}

@@ -19,6 +19,10 @@ set(CMAKE_C_FLAGS
     -Wno-unused-parameter \
     -Wno-sign-compare \
     -Wno-type-limits \
+    -ggdb\
+    \
+    -DMCTP_HAVE_STDIO\
+    -DMCTP_HAVE_FILEIO\
 ")
 
 add_definitions (-DMCTP_LOG_STDERR)
@@ -55,7 +59,7 @@ target_link_libraries (test_serial mctp_intel)
 add_test (NAME serial COMMAND test_serial)
 
 add_executable (test_astpcie tests/test_astpcie.c)
-target_link_options(test_astpcie PRIVATE -z muldefs)
+# target_link_options(test_astpcie PRIVATE -z muldefs)
 target_link_libraries (test_astpcie mctp_intel)
 add_test (NAME astpcie COMMAND test_astpcie)
 

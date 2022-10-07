@@ -282,7 +282,7 @@ static int mctp_binding_smbus_tx(struct mctp_binding *b,
 		pkt_pvt->mux_flags = 0;
 	}
 #endif
-
+	// Destination Slave Address is excluded here.
 	smbus_hdr_tx->command_code = MCTP_COMMAND_CODE;
 	if (!pkt_pvt) {
 		mctp_prerr("Binding private information not available");
@@ -292,17 +292,17 @@ static int mctp_binding_smbus_tx(struct mctp_binding *b,
 	* and escape sequences.
 	*/
 	size_t pkt_length = mctp_pktbuf_size(pkt);
-	smbus_hdr_tx->byte_count = pkt_length + 1;
+	smbus_hdr_tx->byte_count = pkt_length + SMBUS_PEC_BYTE_SIZE; //add one byte PEC
 	smbus_hdr_tx->source_slave_address = smbus->src_slave_addr;
 
-	size_t tx_buf_len = sizeof(*smbus_hdr_tx);
-	uint8_t i2c_message_len = tx_buf_len + pkt_length + SMBUS_PEC_BYTE_SIZE;
+	size_t tx_buf_len = sizeof(*smbus_hdr_tx);// smbus header len = 3
+	uint8_t i2c_message_len = tx_buf_len + pkt_length + SMBUS_PEC_BYTE_SIZE;// whole packet len.
 	if (i2c_message_len > sizeof(smbus->txbuf)) {
 		mctp_prerr(
 			"tx message length exceeds max smbus message length");
 		return -EINVAL;
 	}
-
+	//cpy mctp package to txbuf
 	memcpy(smbus->txbuf + tx_buf_len, &pkt->data[pkt->start], pkt_length);
 	tx_buf_len += pkt_length;
 
